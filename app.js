@@ -1,3 +1,4 @@
+require("./utils/passport-setup");
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -8,23 +9,29 @@ const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 const hpp = require("hpp");
 const compression = require("compression");
+const session = require("express-session");
+const passport = require("passport");
 
 const AppError = require("./utils/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const userRouter = require("./routes/userRoutes");
-const model1Router = require("./routes/model1Routes");
+const periodRouter = require("./routes/periodRoutes");
+const authRouter = require("./routes/authRoutes");
 
 const app = express();
 
 app.enable("trust proxy");
 
 // Implement CORS
-app.use(cors());
+// app.use(cors());
 // Access-Control-Allow-Origin *
 // api.aminoddole.com, front-end aminoddole.com
-// app.use(cors({
-//   origin: 'https://www.aminoddole.com'
-// }))
+app.use(
+    cors({
+        origin: "http://localhost:3001",
+        credentials: true,
+    })
+);
 
 app.options("*", cors());
 // app.options('/api/v1/tours/:id', cors());
@@ -73,9 +80,23 @@ app.use((req, res, next) => {
     next();
 });
 
+// Middleware for sessions
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: true,
+    })
+);
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // 3) ROUTES
 app.use("/api/v1/users", userRouter);
-// app.use("/api/v1/model1s", model1Router);
+// app.use("/api/v1/period", periodRouter);
+app.use("/api/v1/auth", authRouter);
 
 app.all("*", (req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
